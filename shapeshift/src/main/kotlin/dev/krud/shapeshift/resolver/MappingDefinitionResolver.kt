@@ -10,6 +10,8 @@
 
 package dev.krud.shapeshift.resolver
 
+import kotlin.reflect.KClass
+
 interface MappingDefinitionResolver {
-    fun resolve(fromClazz: Class<*>, toClazz: Class<*>): MappingDefinition?
+    fun resolve(fromClazz: KClass<*>, toClazz: KClass<*>): MappingDefinition?
 }

@@ -11,14 +11,15 @@
 package dev.krud.shapeshift.container
 
 import dev.krud.shapeshift.util.getGenericAtPosition
-import java.lang.reflect.Field
-import java.util.*
+import java.util.Optional
+import kotlin.reflect.KProperty
+import kotlin.reflect.jvm.javaField
 
 class OptionalContainerAdapter: ContainerAdapter<Optional<*>> {
     override val containerClazz: Class<Optional<*>> = Optional::class.java
 
-    override fun getTrueType(field: Field): Class<*> {
-        return field.getGenericAtPosition(0)
+    override fun getTrueType(property: KProperty<*>): Class<*>? {
+        return property.javaField?.getGenericAtPosition(0)
     }
 
     override fun unwrapValue(container: Optional<*>): Any? {

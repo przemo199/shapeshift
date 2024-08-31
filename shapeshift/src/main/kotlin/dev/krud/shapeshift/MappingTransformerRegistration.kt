@@ -13,27 +13,28 @@ package dev.krud.shapeshift
 import dev.krud.shapeshift.transformer.EmptyTransformer
 import dev.krud.shapeshift.transformer.base.MappingTransformer
 import dev.krud.shapeshift.util.ClassPair
+import kotlin.reflect.KClass
 
-data class MappingTransformerRegistration<From : Any?, To : Any?>(
-    val fromClazz: Class<From>,
-    val toClazz: Class<To>,
+data class MappingTransformerRegistration<From : Any, To : Any>(
+    val fromClazz: KClass<From>,
+    val toClazz: KClass<To>,
     val transformer: MappingTransformer<From, To>,
     val default: Boolean = false
 ) {
     companion object {
         val EMPTY = MappingTransformerRegistration(
-            Any::class.java,
-            Any::class.java,
+            Any::class,
+            Any::class,
             EmptyTransformer,
             false
         )
 
-        val <From : Any?, To : Any?> MappingTransformerRegistration<From, To>.id: ClassPair<From, To> get() = ClassPair(fromClazz, toClazz)
+        val <From : Any, To : Any> MappingTransformerRegistration<From, To>.id: ClassPair<From, To> get() = ClassPair(fromClazz, toClazz)
 
         inline fun <reified From : Any, reified To : Any> MappingTransformer<From, To>.toRegistration(default: Boolean = false): MappingTransformerRegistration<From, To> {
             return MappingTransformerRegistration(
-                From::class.java,
-                To::class.java,
+                From::class,
+                To::class,
                 this,
                 default
             )

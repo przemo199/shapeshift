@@ -326,7 +326,7 @@ internal class ShapeShiftTests {
     internal fun `test direct withDecorator overload happy flow registers the correct decorator`() {
         val decorator: MappingDecorator<GenericFrom, GenericTo> = MappingDecorator { }
         val shapeShift = ShapeShiftBuilder()
-            .withDecorator(GenericFrom::class.java, GenericTo::class.java, decorator)
+            .withDecorator(GenericFrom::class, GenericTo::class, decorator)
             .build()
         expectThat(shapeShift.decoratorRegistrations.first().decorator)
             .isEqualTo(decorator)
@@ -337,7 +337,7 @@ internal class ShapeShiftTests {
         val transformer: MappingTransformer<String, Int> = MappingTransformer { 1 }
         val shapeShift = ShapeShiftBuilder()
             .excludeDefaultTransformers()
-            .withTransformer(String::class.java, Int::class.java, transformer)
+            .withTransformer(String::class, Int::class, transformer)
             .build()
         expectThat(shapeShift.transformerRegistrations.first().transformer)
             .isEqualTo(transformer)

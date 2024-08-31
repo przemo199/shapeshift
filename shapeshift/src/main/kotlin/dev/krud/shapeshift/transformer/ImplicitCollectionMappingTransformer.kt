@@ -13,29 +13,20 @@ package dev.krud.shapeshift.transformer
 import dev.krud.shapeshift.transformer.base.MappingTransformer
 import dev.krud.shapeshift.transformer.base.MappingTransformerContext
 import java.lang.reflect.ParameterizedType
+import kotlin.reflect.jvm.javaField
 
 class ImplicitCollectionMappingTransformer : MappingTransformer<Collection<Any>, Collection<Any>> {
     override fun transform(context: MappingTransformerContext<out Collection<Any>>): Collection<Any>? {
         context.originalValue ?: return null
-        val type = context.toField?.genericType as? ParameterizedType ?: return null
+        val type = context.toProperty.javaField?.genericType as? ParameterizedType ?: return null
         val collectionType = type.actualTypeArguments[0] as? Class<*> ?: return null
         val baseMapping = context.originalValue.map { context.shapeShift.map(it, collectionType) }
         return when (collectionType.kotlin) {
-            List::class -> {
-                baseMapping
-            }
-            MutableList::class -> {
-                baseMapping.toMutableList()
-            }
-            Set::class -> {
-                baseMapping.toSet()
-            }
-            MutableSet::class -> {
-                baseMapping.toMutableSet()
-            }
-            else -> {
-                baseMapping
-            }
+            List::class -> baseMapping
+            MutableList::class -> baseMapping.toMutableList()
+            Set::class -> baseMapping.toSet()
+            MutableSet::class -> baseMapping.toMutableSet()
+            else -> baseMapping
         }
     }
 }

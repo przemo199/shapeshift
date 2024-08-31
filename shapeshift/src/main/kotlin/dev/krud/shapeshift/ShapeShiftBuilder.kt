@@ -41,7 +41,7 @@ import dev.krud.shapeshift.transformer.StringToShortMappingTransformer
 import dev.krud.shapeshift.transformer.base.MappingTransformer
 import java.util.*
 import java.util.function.Supplier
-import javax.swing.text.html.Option
+import kotlin.reflect.KClass
 
 /**
  * A builder used to create a new ShapeShift instance.
@@ -96,7 +96,7 @@ class ShapeShiftBuilder {
     /**
      * Add a decorator to the ShapeShift instance
      */
-    fun <From : Any, To : Any> withDecorator(fromClazz: Class<From>, toClazz: Class<To>, decorator: MappingDecorator<From, To>): ShapeShiftBuilder {
+    fun <From : Any, To : Any> withDecorator(fromClazz: KClass<From>, toClazz: KClass<To>, decorator: MappingDecorator<From, To>): ShapeShiftBuilder {
         decoratorRegistrations += MappingDecoratorRegistration(fromClazz, toClazz, decorator)
         return this
     }
@@ -120,7 +120,7 @@ class ShapeShiftBuilder {
      * Add a resolver to the ShapeShift instance
      */
     @JvmOverloads
-    fun <From : Any, To : Any> withTransformer(fromClazz: Class<From>, toClazz: Class<To>, transformer: MappingTransformer<From, To>, default: Boolean = false): ShapeShiftBuilder {
+    fun <From : Any, To : Any> withTransformer(fromClazz: KClass<From>, toClazz: KClass<To>, transformer: MappingTransformer<From, To>, default: Boolean = false): ShapeShiftBuilder {
         transformerRegistrations += MappingTransformerRegistration(fromClazz, toClazz, transformer, default)
         return this
     }
@@ -137,7 +137,7 @@ class ShapeShiftBuilder {
      * Add a new mapping definition to the ShapeShift instance using the Kotlin DSL
      */
     inline fun <reified From : Any, reified To : Any> withMapping(block: KotlinDslMappingDefinitionBuilder<From, To>.() -> Unit): ShapeShiftBuilder {
-        val builder = KotlinDslMappingDefinitionBuilder(From::class.java, To::class.java)
+        val builder = KotlinDslMappingDefinitionBuilder(From::class, To::class)
         builder.block()
         val (mappingDefinitions, decorators) = builder.build()
         withMapping(mappingDefinitions)

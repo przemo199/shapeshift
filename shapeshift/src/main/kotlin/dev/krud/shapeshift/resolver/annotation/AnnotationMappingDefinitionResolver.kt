@@ -10,20 +10,26 @@
 
 package dev.krud.shapeshift.resolver.annotation
 
-import dev.krud.shapeshift.dto.ResolvedMappedField
+import dev.krud.shapeshift.dto.ResolvedMappedProperty
 import dev.krud.shapeshift.dto.TransformerCoordinates
 import dev.krud.shapeshift.resolver.MappingDefinition
 import dev.krud.shapeshift.resolver.MappingDefinitionResolver
 import dev.krud.shapeshift.util.getAutoMappings
-import dev.krud.shapeshift.util.getDeclaredFieldRecursive
+import dev.krud.shapeshift.util.getDeclaredPropertyRecursive
 import dev.krud.shapeshift.util.splitIgnoreEmpty
-import java.lang.reflect.Field
+import dev.krud.shapeshift.util.type
+import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.superclasses
+import kotlin.reflect.jvm.javaField
 
 class AnnotationMappingDefinitionResolver : MappingDefinitionResolver {
-    override fun resolve(fromClazz: Class<*>, toClazz: Class<*>): MappingDefinition {
+    override fun resolve(fromClazz: KClass<*>, toClazz: KClass<*>): MappingDefinition {
         val mappedFieldReferences = getMappedFields(fromClazz, toClazz)
 
-        val resolvedMappedFields = mutableListOf<ResolvedMappedField>()
+        val resolvedMappedProperties = mutableListOf<ResolvedMappedProperty>()
         for ((mappedField, field) in mappedFieldReferences) {
             val transformerCoordinates = TransformerCoordinates.ofType(mappedField.transformer.java)
 
@@ -40,7 +46,7 @@ class AnnotationMappingDefinitionResolver : MappingDefinitionResolver {
                 null
             }
 
-            resolvedMappedFields += ResolvedMappedField(
+            resolvedMappedProperties += ResolvedMappedProperty(
                 mapFromCoordinates,
                 mapToCoordinates,
                 transformerCoordinates,
@@ -50,90 +56,95 @@ class AnnotationMappingDefinitionResolver : MappingDefinitionResolver {
                 mappedField.overrideMappingStrategy
             )
         }
-        resolvedMappedFields += generateAutoMappings(fromClazz, toClazz).filter { autoResolvedMappedField ->
-            resolvedMappedFields.none {
-                it.mapFromCoordinates.first() == autoResolvedMappedField.mapFromCoordinates.first() || it.mapToCoordinates.first() == autoResolvedMappedField.mapToCoordinates.first()
+        resolvedMappedProperties += generateAutoMappings(fromClazz, toClazz).filter { autoResolvedMappedField ->
+            resolvedMappedProperties.none {
+                it.mapFromProperties.first() == autoResolvedMappedField.mapFromProperties.first() || it.mapToProperties.first() == autoResolvedMappedField.mapToProperties.first()
             }
         }
-        return MappingDefinition(fromClazz, toClazz, resolvedMappedFields)
+        return MappingDefinition(fromClazz, toClazz, resolvedMappedProperties)
     }
 
-    private fun generateAutoMappings(fromClazz: Class<*>, toClazz: Class<*>): List<ResolvedMappedField> {
-        val autoMappingAnnotations = fromClazz.getDeclaredAnnotationsByType(AutoMapping::class.java)
+    private fun generateAutoMappings(fromClazz: KClass<*>, toClazz: KClass<*>): List<ResolvedMappedProperty> {
+        val autoMappingAnnotations = fromClazz.annotations.filter { it is AutoMapping } as List<AutoMapping>
 
         if (autoMappingAnnotations.isEmpty()) {
             return emptyList()
         }
 
-        val effectiveAnnotation = autoMappingAnnotations.firstOrNull { it.target.java == toClazz }
-            ?: (autoMappingAnnotations.firstOrNull { it.target.java == Nothing::class.java } ?: return emptyList())
+        val effectiveAnnotation = autoMappingAnnotations.firstOrNull { it.target == toClazz }
+            ?: (autoMappingAnnotations.firstOrNull { it.target == Nothing::class } ?: return emptyList())
         return getAutoMappings(fromClazz, toClazz, effectiveAnnotation.strategy)
     }
 
     /**
      * Get true from field from path like "user.address.city" delimtied by [NODE_DELIMITER]
      */
-    fun resolveNodesToFields(nodes: List<String>, field: Field?, clazz: Class<*>): List<Field> {
+    fun resolveNodesToFields(nodes: List<String>, field: KProperty1<*, *>?, clazz: KClass<*>): List<KProperty1<*, *>> {
         if (field == null) {
             if (nodes.isEmpty()) {
                 error("Unable to determine mapped field for $clazz")
             }
-            val realField = clazz.getDeclaredFieldRecursive(nodes.first())
-            return resolveNodesToFields(nodes.drop(1), realField, realField.type)
+            val realField = clazz.getDeclaredPropertyRecursive(nodes.first())
+            return resolveNodesToFields(nodes.drop(1), realField, realField.type().kotlin)
         }
 
         if (nodes.isEmpty()) {
             return listOf(field)
         }
-        val nextField = field.type.getDeclaredFieldRecursive(nodes.first())
-        return listOf(field) + resolveNodesToFields(nodes.drop(1), nextField, nextField.type)
+        val nextField = field.type().kotlin.getDeclaredPropertyRecursive(nodes.first())
+        return listOf(field) + resolveNodesToFields(nodes.drop(1), nextField, nextField.type().kotlin)
     }
 
-    private fun getMappedFields(fromClass: Class<*>, toClass: Class<*>): List<MappedFieldReference> {
-        var clazz: Class<*>? = fromClass
+    private fun getMappedFields(fromClass: KClass<*>, toClass: KClass<*>): List<MappedFieldReference> {
+        var clazz: KClass<*>? = fromClass
         val result = mutableListOf<MappedFieldReference>()
         while (clazz != null) {
-            val defaultMappingTarget = clazz.getDeclaredAnnotation(DefaultMappingTarget::class.java)
-            val defaultToClass: Class<*> = defaultMappingTarget?.value?.java ?: Nothing::class.java
-            val fields = clazz.declaredFields
-            result += clazz.getDeclaredAnnotationsByType(MappedField::class.java)
+            val defaultMappingTarget = fromClass.annotations.firstOrNull { it is DefaultMappingTarget } as DefaultMappingTarget?
+            val defaultToClass = defaultMappingTarget?.value ?: Nothing::class
+            val properties = fromClass.memberProperties
+            result += clazz.annotations
                 .filter { mappedField ->
+                    if (mappedField !is MappedField) return@filter false
                     try {
-                        return@filter isOfType(defaultToClass, mappedField.target.java, toClass)
+                        return@filter isOfType(defaultToClass, (mappedField).target, toClass)
                     } catch (e: IllegalStateException) {
                         error("Could not create entity structure for <" + fromClass.simpleName + ", " + toClass.simpleName + ">: " + e.message)
                     }
                 }
-                .map { MappedFieldReference(it) }
-            for (field in fields) {
-                result += field.getDeclaredAnnotationsByType(MappedField::class.java)
+                .map { MappedFieldReference(it as MappedField) }
+            for (property in properties) {
+                val annotations = property.annotations.toMutableList()
+                property.javaField?.annotations?.let {
+                    annotations.addAll(it)
+                }
+                result += annotations
                     .filter { mappedField ->
+                        if (mappedField !is MappedField) return@filter false
                         try {
-                            return@filter isOfType(defaultToClass, mappedField.target.java, toClass)
+                            return@filter isOfType(defaultToClass, mappedField.target, toClass)
                         } catch (e: IllegalStateException) {
                             throw IllegalStateException("Could not create entity structure for <" + fromClass.simpleName + ", " + toClass.simpleName + ">: " + e.message)
                         }
                     }
-                    .map { MappedFieldReference(it, field) }
+                    .map { MappedFieldReference(it as MappedField, property) }
             }
-            clazz = clazz.superclass
+            clazz = clazz.superclasses.firstOrNull()
         }
-
         return result
     }
 
-    private fun isOfType(defaultToClass: Class<*>, fromClass: Class<*>, toClass: Class<*>): Boolean {
-        var trueFromClass: Class<*> = fromClass
-        if (trueFromClass == Nothing::class.java) {
-            check(defaultToClass != Nothing::class.java) { "No mapping target or default mapping target specified" }
+    private fun isOfType(defaultToClass: KClass<*>, fromClass: KClass<*>, toClass: KClass<*>): Boolean {
+        var trueFromClass = fromClass
+        if (trueFromClass == Nothing::class) {
+            check(defaultToClass != Nothing::class) { "No mapping target or default mapping target specified" }
             trueFromClass = defaultToClass
         }
-        return trueFromClass.isAssignableFrom(toClass)
+        return toClass.isSubclassOf(trueFromClass)
     }
 
     private data class MappedFieldReference(
         val mappedField: MappedField,
-        val field: Field? = null
+        val field: KProperty1<*, *>? = null
     )
 
     companion object {

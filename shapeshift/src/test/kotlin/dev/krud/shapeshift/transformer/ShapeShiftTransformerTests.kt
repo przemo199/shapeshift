@@ -18,7 +18,6 @@ import strikt.api.expectThrows
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNull
 import java.util.*
-import kotlin.reflect.jvm.javaField
 
 class ShapeShiftTransformerTests {
     @Test
@@ -420,8 +419,8 @@ class ShapeShiftTransformerTests {
             from.fromChildren,
             from,
             to,
-            from::fromChildren.javaField!!,
-            to::toChildren.javaField!!,
+            ImplicitCollectionFrom::fromChildren,
+            ImplicitCollectionTo::toChildren,
             shapeShift
         )
         val result = transformer.transform(context)

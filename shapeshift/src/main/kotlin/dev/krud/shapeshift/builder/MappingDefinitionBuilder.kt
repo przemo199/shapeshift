@@ -12,20 +12,22 @@ package dev.krud.shapeshift.builder
 
 import dev.krud.shapeshift.MappingStrategy
 import dev.krud.shapeshift.condition.MappingCondition
-import dev.krud.shapeshift.dto.ResolvedMappedField
+import dev.krud.shapeshift.dto.ResolvedMappedProperty
 import dev.krud.shapeshift.dto.TransformerCoordinates
 import dev.krud.shapeshift.enums.AutoMappingStrategy
 import dev.krud.shapeshift.resolver.MappingDefinition
 import dev.krud.shapeshift.transformer.base.MappingTransformer
 import dev.krud.shapeshift.util.getAutoMappings
-import dev.krud.shapeshift.util.getDeclaredFieldRecursive
-import java.lang.reflect.Field
+import dev.krud.shapeshift.util.getDeclaredPropertyRecursive
+import dev.krud.shapeshift.util.type
+import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
 
 /**
  * A builder of mapping definitions for non-Kotlin use
  */
-class MappingDefinitionBuilder(val fromClazz: Class<out Any>, val toClazz: Class<out Any>) {
-    private val resolvedMappedFields = mutableListOf<ResolvedMappedField>()
+class MappingDefinitionBuilder(val fromClazz: KClass<out Any>, val toClazz: KClass<out Any>) {
+    private val resolvedMappedProperties = mutableListOf<ResolvedMappedProperty>()
     private var autoMappingStrategy: AutoMappingStrategy = AutoMappingStrategy.NONE
 
     /**
@@ -60,14 +62,14 @@ class MappingDefinitionBuilder(val fromClazz: Class<out Any>, val toClazz: Class
     fun build(): MappingDefinition {
         val autoMappedFields = getAutoMappings(fromClazz, toClazz, autoMappingStrategy)
             .filter { autoResolvedMappedField ->
-                resolvedMappedFields.none {
-                    it.mapFromCoordinates.first() == autoResolvedMappedField.mapFromCoordinates.first() || it.mapToCoordinates.first() == autoResolvedMappedField.mapToCoordinates.first()
+                resolvedMappedProperties.none {
+                    it.mapFromProperties.first() == autoResolvedMappedField.mapFromProperties.first() || it.mapToProperties.first() == autoResolvedMappedField.mapToProperties.first()
                 }
             }
         return MappingDefinition(
             fromClazz,
             toClazz,
-            resolvedMappedFields + autoMappedFields
+            resolvedMappedProperties + autoMappedFields
         )
     }
 
@@ -155,7 +157,7 @@ class MappingDefinitionBuilder(val fromClazz: Class<out Any>, val toClazz: Class
         }
 
         private fun buildAndAddSelf() {
-            val resolvedMappedField = ResolvedMappedField(
+            val resolvedMappedProperty = ResolvedMappedProperty(
                 resolveNodes(from.split("."), fromClazz),
                 resolveNodes(to.split("."), toClazz),
                 transformerCoordinates,
@@ -164,15 +166,15 @@ class MappingDefinitionBuilder(val fromClazz: Class<out Any>, val toClazz: Class
                 condition,
                 mappingStrategy
             )
-            this@MappingDefinitionBuilder.resolvedMappedFields.add(resolvedMappedField)
+            this@MappingDefinitionBuilder.resolvedMappedProperties.add(resolvedMappedProperty)
         }
     }
 
-    private fun resolveNodes(nodes: List<String>, clazz: Class<*>): List<Field> {
+    private fun resolveNodes(nodes: List<String>, clazz: KClass<*>): List<KProperty1<*, *>> {
         if (nodes.isEmpty()) {
             return emptyList()
         }
-        val realField = clazz.getDeclaredFieldRecursive(nodes.first())
-        return listOf(realField) + resolveNodes(nodes.drop(1), realField.type)
+        val realField = clazz.getDeclaredPropertyRecursive(nodes.first())
+        return listOf(realField) + resolveNodes(nodes.drop(1), realField.type().kotlin)
     }
 }

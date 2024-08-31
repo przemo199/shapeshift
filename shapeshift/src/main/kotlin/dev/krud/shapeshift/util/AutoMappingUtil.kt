@@ -10,33 +10,37 @@
 
 package dev.krud.shapeshift.util
 
-import dev.krud.shapeshift.dto.ResolvedMappedField
+import dev.krud.shapeshift.dto.ResolvedMappedProperty
 import dev.krud.shapeshift.dto.TransformerCoordinates
 import dev.krud.shapeshift.enums.AutoMappingStrategy
+import kotlin.reflect.KClass
+import kotlin.reflect.full.memberProperties
 
-internal fun <From, To> getAutoMappings(fromClazz: Class<From>, toClazz: Class<To>, strategy: AutoMappingStrategy): List<ResolvedMappedField> {
-    val resolvedMappedFields = mutableListOf<ResolvedMappedField>()
-    if (strategy != AutoMappingStrategy.NONE) {
-        val fromFields = fromClazz.getDeclaredFieldsRecursive()
-        val toFields = toClazz.getDeclaredFieldsRecursive()
-        for (fromField in fromFields) {
-            val toField = toFields.find {
-                when (strategy) {
-                    AutoMappingStrategy.BY_NAME -> it.name == fromField.name
-                    AutoMappingStrategy.BY_NAME_AND_TYPE -> it.name == fromField.name && it.type.kotlin.javaObjectType == fromField.type.kotlin.javaObjectType
-                    else -> error("Unsupported auto mapping strategy")
-                }
-            } ?: continue
-            resolvedMappedFields += ResolvedMappedField(
-                listOf(fromField),
-                listOf(toField),
-                TransformerCoordinates.NONE,
-                null,
-                null,
-                null,
-                null
-            )
-        }
+internal fun <From: Any, To: Any> getAutoMappings(fromClazz: KClass<From>, toClazz: KClass<To>, strategy: AutoMappingStrategy): List<ResolvedMappedProperty> {
+    if (AutoMappingStrategy.NONE == strategy) {
+        return mutableListOf<ResolvedMappedProperty>()
     }
-    return resolvedMappedFields
+
+    val resolvedMappedProperties = mutableListOf<ResolvedMappedProperty>()
+    val fromProperties = fromClazz.memberProperties
+    val toProperties = toClazz.memberProperties
+    for (fromProperty in fromProperties) {
+        val toProperty = toProperties.find {
+            when (strategy) {
+                AutoMappingStrategy.BY_NAME -> it.name == fromProperty.name
+                AutoMappingStrategy.BY_NAME_AND_TYPE -> it.name == fromProperty.name && it.type().kotlin == fromProperty.type().kotlin
+                else -> error("Unsupported auto mapping strategy")
+            }
+        } ?: continue
+        resolvedMappedProperties += ResolvedMappedProperty(
+            listOf(fromProperty),
+            listOf(toProperty),
+            TransformerCoordinates.NONE,
+            null,
+            null,
+            null,
+            null
+        )
+    }
+    return resolvedMappedProperties
 }

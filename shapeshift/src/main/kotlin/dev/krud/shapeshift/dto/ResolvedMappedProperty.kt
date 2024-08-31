@@ -10,6 +10,17 @@
 
 package dev.krud.shapeshift.dto
 
-import java.lang.reflect.Field
+import dev.krud.shapeshift.MappingStrategy
+import dev.krud.shapeshift.condition.MappingCondition
+import dev.krud.shapeshift.transformer.base.MappingTransformer
+import kotlin.reflect.KProperty1
 
-internal data class ObjectFieldTrio(val target: Any, val field: Field, val type: Class<*>)
+data class ResolvedMappedProperty(
+    val mapFromProperties: List<KProperty1<*, *>>,
+    val mapToProperties: List<KProperty1<*, *>>,
+    val transformerCoordinates: TransformerCoordinates = TransformerCoordinates.NONE,
+    val transformer: MappingTransformer<*, *>?,
+    val conditionClazz: Class<out MappingCondition<*>>?,
+    val condition: MappingCondition<*>?,
+    val overrideMappingStrategy: MappingStrategy?
+)

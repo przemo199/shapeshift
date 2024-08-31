@@ -6,8 +6,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.assertions.isEqualTo
-import java.util.*
-import javax.swing.text.html.Option
+import java.util.Optional
 
 class ValueContainerTest {
 

@@ -10,10 +10,11 @@
 
 package dev.krud.shapeshift.resolver
 
-import dev.krud.shapeshift.dto.ResolvedMappedField
+import dev.krud.shapeshift.dto.ResolvedMappedProperty
+import kotlin.reflect.KClass
 
 data class MappingDefinition(
-    val fromClazz: Class<*>,
-    val toClazz: Class<*>,
-    val resolvedMappedFields: List<ResolvedMappedField>
+    val fromClazz: KClass<*>,
+    val toClazz: KClass<*>,
+    val resolvedMappedProperties: List<ResolvedMappedProperty>
 )

@@ -27,7 +27,7 @@ class MappingDefinitionBuilderTests {
         val shapeShift = ShapeShiftBuilder()
             .excludeDefaultTransformers()
             .withMapping(
-                MappingDefinitionBuilder(From::class.java, To::class.java)
+                MappingDefinitionBuilder(From::class, To::class)
                     .mapField("name", "name")
                     .mapField("age", "age")
                     .mapField("address.city", "city")
@@ -49,7 +49,7 @@ class MappingDefinitionBuilderTests {
         val shapeShift = ShapeShiftBuilder()
             .excludeDefaultTransformers()
             .withMapping(
-                MappingDefinitionBuilder(From::class.java, To::class.java)
+                MappingDefinitionBuilder(From::class, To::class)
                     .mapField("name", "name")
                     .mapField("age", "age").withCondition { ctx -> ctx.originalValue as Int > 31 }
                     .build()
@@ -68,7 +68,7 @@ class MappingDefinitionBuilderTests {
         val shapeShift = ShapeShiftBuilder()
             .excludeDefaultTransformers()
             .withMapping(
-                MappingDefinitionBuilder(From::class.java, To::class.java)
+                MappingDefinitionBuilder(From::class, To::class)
                     .mapField("name", "name")
                     .mapField("age", "age").withCondition(Above31Condition::class.java)
                     .build()
@@ -87,7 +87,7 @@ class MappingDefinitionBuilderTests {
         val shapeShift = ShapeShiftBuilder()
             .excludeDefaultTransformers()
             .withMapping(
-                MappingDefinitionBuilder(From::class.java, To::class.java)
+                MappingDefinitionBuilder(From::class, To::class)
                     .mapField("age", "age").withTransformer { ctx -> ctx.originalValue as Int + 1 }
                     .build()
             )
@@ -104,7 +104,7 @@ class MappingDefinitionBuilderTests {
             .excludeDefaultTransformers()
             .withTransformer(AddOneTransformer())
             .withMapping(
-                MappingDefinitionBuilder(From::class.java, To::class.java)
+                MappingDefinitionBuilder(From::class, To::class)
                     .mapField("age", "age").withTransformer(AddOneTransformer::class.java)
                     .build()
             )
@@ -121,7 +121,7 @@ class MappingDefinitionBuilderTests {
             .excludeDefaultTransformers()
             .withDefaultMappingStrategy(MappingStrategy.MAP_NOT_NULL)
             .withMapping(
-                MappingDefinitionBuilder(From::class.java, To::class.java)
+                MappingDefinitionBuilder(From::class, To::class)
                     .mapField("profession", "profession").withMappingStrategy(MappingStrategy.MAP_ALL)
                     .build()
             )
@@ -137,7 +137,7 @@ class MappingDefinitionBuilderTests {
         val shapeShift = ShapeShiftBuilder()
             .excludeDefaultTransformers()
             .withMapping(
-                MappingDefinitionBuilder(From::class.java, To::class.java)
+                MappingDefinitionBuilder(From::class, To::class)
                     .autoMap()
                     .build()
             )

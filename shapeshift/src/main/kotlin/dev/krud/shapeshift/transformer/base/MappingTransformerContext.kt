@@ -11,13 +11,13 @@
 package dev.krud.shapeshift.transformer.base
 
 import dev.krud.shapeshift.ShapeShift
-import java.lang.reflect.Field
+import kotlin.reflect.KProperty1
 
 data class MappingTransformerContext<From : Any?>(
     val originalValue: From?,
     val fromObject: Any,
     val toObject: Any,
-    val fromField: Field,
-    val toField: Field,
+    val fromProperty: KProperty1<*, *>,
+    val toProperty: KProperty1<*, *>,
     val shapeShift: ShapeShift
 )

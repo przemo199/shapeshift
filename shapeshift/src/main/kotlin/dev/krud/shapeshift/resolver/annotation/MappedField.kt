@@ -18,7 +18,7 @@ import kotlin.reflect.KClass
 /**
  * Indicates that an annotated field should be mapped to a field on a different model by the [FieldMapper]
  */
-@Target(AnnotationTarget.FIELD, AnnotationTarget.CLASS)
+@Target(AnnotationTarget.FIELD, AnnotationTarget.PROPERTY, AnnotationTarget.CLASS)
 @Repeatable
 annotation class MappedField(
     /**

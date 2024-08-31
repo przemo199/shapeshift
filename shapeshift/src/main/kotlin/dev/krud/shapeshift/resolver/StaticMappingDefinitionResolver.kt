@@ -10,10 +10,12 @@
 
 package dev.krud.shapeshift.resolver
 
+import kotlin.reflect.KClass
+
 class StaticMappingDefinitionResolver(
     private val mappingDefinitions: List<MappingDefinition>
 ) : MappingDefinitionResolver {
-    override fun resolve(fromClazz: Class<*>, toClazz: Class<*>): MappingDefinition? {
+    override fun resolve(fromClazz: KClass<*>, toClazz: KClass<*>): MappingDefinition? {
         return mappingDefinitions.find { it.fromClazz == fromClazz && it.toClazz == toClazz }
     }
 }

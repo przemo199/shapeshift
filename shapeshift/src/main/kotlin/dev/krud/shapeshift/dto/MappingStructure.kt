@@ -9,4 +9,10 @@
  */
 package dev.krud.shapeshift.dto
 
-internal class MappingStructure(var sourceClazz: Class<*>, var targetClazz: Class<*>, val resolvedMappedFields: List<ResolvedMappedField>)
+import kotlin.reflect.KClass
+
+internal data class MappingStructure(
+    var fromClazz: KClass<*>,
+    var toClazz: KClass<*>,
+    val resolvedMappedProperties: List<ResolvedMappedProperty>
+)

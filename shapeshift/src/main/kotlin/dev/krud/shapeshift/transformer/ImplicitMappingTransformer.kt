@@ -12,10 +12,11 @@ package dev.krud.shapeshift.transformer
 
 import dev.krud.shapeshift.transformer.base.MappingTransformer
 import dev.krud.shapeshift.transformer.base.MappingTransformerContext
+import dev.krud.shapeshift.util.type
 
 class ImplicitMappingTransformer() : MappingTransformer<Any, Any> {
     override fun transform(context: MappingTransformerContext<out Any>): Any? {
         context.originalValue ?: return null
-        return context.shapeShift.map(context.originalValue, context.toField.type)
+        return context.shapeShift.map(context.originalValue, context.toProperty.type())
     }
 }

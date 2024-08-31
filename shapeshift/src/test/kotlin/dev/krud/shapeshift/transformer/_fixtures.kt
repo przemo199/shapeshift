@@ -45,8 +45,8 @@ fun <From : Any?> mockMappingTransformerContext(value: From?): MappingTransforme
         value,
         ExampleObject(),
         ExampleObject(),
-        ExampleObject::name.javaField!!,
-        ExampleObject::name.javaField!!,
+        ExampleObject::name,
+        ExampleObject::name,
         ShapeShiftBuilder().build()
     )
 }

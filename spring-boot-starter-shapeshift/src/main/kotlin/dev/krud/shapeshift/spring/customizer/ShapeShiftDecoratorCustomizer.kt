@@ -28,9 +28,9 @@ class ShapeShiftDecoratorCustomizer : ShapeShiftBuilderCustomizer {
             val types = GenericTypeResolver.resolveTypeArguments(mappingDecorator::class.java, MappingDecorator::class.java)
             builder.withDecorator(
                 MappingDecoratorRegistration(
-                    types[0] as Class<Any>,
-                    types[1] as Class<Any>,
-                    mappingDecorator as MappingDecorator<Any, Any>
+                    types[0].kotlin,
+                    types[1].kotlin,
+                    mappingDecorator
                 )
             )
         }

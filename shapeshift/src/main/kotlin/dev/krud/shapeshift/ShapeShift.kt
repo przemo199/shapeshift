@@ -18,8 +18,8 @@ import dev.krud.shapeshift.container.ContainerAdapter
 import dev.krud.shapeshift.decorator.MappingDecorator
 import dev.krud.shapeshift.decorator.MappingDecoratorContext
 import dev.krud.shapeshift.dto.MappingStructure
-import dev.krud.shapeshift.dto.ObjectFieldTrio
-import dev.krud.shapeshift.dto.ResolvedMappedField
+import dev.krud.shapeshift.dto.ObjectPropertyTrio
+import dev.krud.shapeshift.dto.ResolvedMappedProperty
 import dev.krud.shapeshift.dto.TransformerCoordinates
 import dev.krud.shapeshift.resolver.MappingDefinitionResolver
 import dev.krud.shapeshift.transformer.base.MappingTransformer
@@ -28,8 +28,14 @@ import dev.krud.shapeshift.util.ClassPair
 import dev.krud.shapeshift.util.concurrentMapOf
 import dev.krud.shapeshift.util.getValue
 import dev.krud.shapeshift.util.setValue
+import dev.krud.shapeshift.util.type
 import java.lang.reflect.Field
 import java.util.function.Supplier
+import kotlin.reflect.KClass
+import kotlin.reflect.KMutableProperty1
+import kotlin.reflect.KProperty1
+import kotlin.reflect.jvm.isAccessible
+import kotlin.reflect.jvm.javaField
 
 class ShapeShift internal constructor(
     transformersRegistrations: Set<MappingTransformerRegistration<out Any, out Any>>,
@@ -40,7 +46,7 @@ class ShapeShift internal constructor(
     val containerAdapters: Map<Class<*>, ContainerAdapter<out Any>>
 ) {
     val transformerRegistrations: MutableList<MappingTransformerRegistration<out Any, out Any>> = mutableListOf()
-    internal val transformersByTypeCache: MutableMap<Class<out MappingTransformer<out Any?, out Any?>>, MappingTransformerRegistration<out Any?, out Any?>> =
+    internal val transformersByTypeCache: MutableMap<Class<out MappingTransformer<out Any?, out Any?>>, MappingTransformerRegistration<out Any, out Any>> =
         concurrentMapOf()
     internal val defaultTransformers: MutableMap<ClassPair<out Any, out Any>, MappingTransformerRegistration<out Any, out Any>> = mutableMapOf()
     private val mappingStructures: MutableMap<ClassPair<out Any, out Any>, MappingStructure> = concurrentMapOf()
@@ -56,7 +62,7 @@ class ShapeShift internal constructor(
         }
     }
 
-    inline fun <From : Any, reified To : Any> map(fromObject: From): To {
+    inline fun <From: Any, reified To: Any> map(fromObject: From): To {
         return map(fromObject, To::class.java)
     }
 
@@ -72,15 +78,15 @@ class ShapeShift internal constructor(
     /**
      * Map between the [fromObject] and [toObject] objects
      */
-    fun <From : Any, To : Any> map(fromObject: From, toObject: To): To {
-        val toClazz = toObject::class.java
-        val classPair = ClassPair(fromObject::class.java, toClazz)
-        val mappingStructure = getMappingStructure(fromObject::class.java, toClazz)
+    fun <From: Any, To: Any> map(fromObject: From, toObject: To): To {
+        val toClazz = toObject::class
+        val mappingStructure = getMappingStructure(fromObject::class, toClazz)
 
-        for (resolvedMappedField in mappingStructure.resolvedMappedFields) {
-            mapField(fromObject, toObject, resolvedMappedField)
+        for (resolvedMappedProperty in mappingStructure.resolvedMappedProperties) {
+            mapProperty(fromObject, toObject, resolvedMappedProperty)
         }
 
+        val classPair = ClassPair(fromObject::class, toClazz)
         val decorators = getDecorators<From, To>(classPair)
         if (decorators.isNotEmpty()) {
             val context = MappingDecoratorContext(fromObject, toObject, this)
@@ -110,15 +116,15 @@ class ShapeShift internal constructor(
         return mapCollection(fromObjects, To::class.java)
     }
 
-    private fun <From : Any, To : Any> mapField(fromObject: From, toObject: To, resolvedMappedField: ResolvedMappedField) {
-        val fromPair = getFieldInstanceByNodes(resolvedMappedField.mapFromCoordinates, fromObject, SourceType.FROM) ?: return
-        val toPair = getFieldInstanceByNodes(resolvedMappedField.mapToCoordinates, toObject, SourceType.TO) ?: return
-        val transformerRegistration = getTransformer(resolvedMappedField.transformerCoordinates, fromPair, toPair)
-        fromPair.field.isAccessible = true
-        toPair.field.isAccessible = true
+    private fun <From : Any, To : Any> mapProperty(fromObject: From, toObject: To, resolvedMappedProperty: ResolvedMappedProperty) {
+        val fromPair = getFromPairInstanceByNodes(resolvedMappedProperty.mapFromProperties, fromObject) ?: return
+        val toPair = getToPairInstanceByNodes(resolvedMappedProperty.mapToProperties, toObject) ?: return
+        val transformerRegistration = getTransformer(resolvedMappedProperty.transformerCoordinates, fromPair, toPair)
+        fromPair.property.isAccessible = true
+        toPair.property.isAccessible = true
 
-        val mappingStrategy = resolvedMappedField.effectiveMappingStrategy(defaultMappingStrategy)
-        var fromValue = fromPair.field.getValue(fromPair.target)
+        val mappingStrategy = resolvedMappedProperty.effectiveMappingStrategy(defaultMappingStrategy)
+        var fromValue = fromPair.property.getter.call(fromPair.target)
         val shouldMapValue = when (mappingStrategy) {
             MappingStrategy.NONE -> error("Mapping strategy is set to NONE")
             MappingStrategy.MAP_ALL -> true
@@ -126,42 +132,42 @@ class ShapeShift internal constructor(
         }
 
         if (shouldMapValue) {
-            fromValue = fromPair.field.getEffectiveValue(fromPair.target)
+            fromValue = fromPair.property.getEffectiveValue(fromPair.target)
             try {
-                if (!resolvedMappedField.conditionMatches(fromValue)) {
+                if (!resolvedMappedProperty.conditionMatches(fromValue)) {
                     return
                 }
 
-                val valueToSet = if (resolvedMappedField.transformer != null) {
-                    val transformer = resolvedMappedField.transformer as MappingTransformer<Any, Any>
-                    val context = MappingTransformerContext(fromValue, fromObject, toObject, fromPair.field, toPair.field, this)
+                val valueToSet = if (resolvedMappedProperty.transformer != null) {
+                    val transformer = resolvedMappedProperty.transformer as MappingTransformer<Any, Any>
+                    val context = MappingTransformerContext(fromValue, fromObject, toObject, fromPair.property, toPair.property, this)
                     transformer.transform(context)
                 } else if (transformerRegistration != MappingTransformerRegistration.EMPTY) {
                     val transformer = transformerRegistration.transformer as MappingTransformer<Any, Any>
-                    val context = MappingTransformerContext(fromValue, fromObject, toObject, fromPair.field, toPair.field, this)
+                    val context = MappingTransformerContext(fromValue, fromObject, toObject, fromPair.property, toPair.property, this)
                     transformer.transform(context)
                 } else {
                     fromValue
                 }
 
                 if (valueToSet == null) {
-                    toPair.field.setEffectiveValue(toPair.target, null)
+                    toPair.property.setEffectiveValue(toPair.target, null)
                 } else {
-                    if (!toPair.type.isAssignableFrom(valueToSet::class.java)) {
-                        error("Type mismatch: Expected ${toPair.type} but got ${valueToSet::class.java}")
-                    }
-                    toPair.field.setEffectiveValue(toPair.target, valueToSet)
+//                    if (!toPair.type.isSubclassOf(valueToSet::class)) {
+//                        error("Type mismatch: Expected ${toPair.type} but got ${valueToSet::class.java}")
+//                    }
+                    toPair.property.setEffectiveValue(toPair.target, valueToSet)
                 }
             } catch (e: Exception) {
                 val newException =
-                    IllegalStateException("Could not map value ${fromPair.field.name} of class ${fromPair.target.javaClass.simpleName} to ${toPair.field.name} of class ${toPair.target.javaClass.simpleName}: ${e.message}")
+                    IllegalStateException("Could not map value ${fromPair.property.name} of class ${fromPair.target.javaClass.simpleName} to ${toPair.property.name} of class ${toPair.target.javaClass.simpleName}: ${e.message}")
                 newException.initCause(e)
                 throw newException
             }
         }
     }
 
-    private fun ResolvedMappedField.conditionMatches(value: Any?): Boolean {
+    private fun ResolvedMappedProperty.conditionMatches(value: Any?): Boolean {
         val condition = this.condition
             ?: this.conditionClazz?.getCachedInstance()
             ?: return true
@@ -170,7 +176,7 @@ class ShapeShift internal constructor(
         return condition.isValid(context)
     }
 
-    private fun ResolvedMappedField.effectiveMappingStrategy(defaultMappingStrategy: MappingStrategy): MappingStrategy {
+    private fun ResolvedMappedProperty.effectiveMappingStrategy(defaultMappingStrategy: MappingStrategy): MappingStrategy {
         return if (overrideMappingStrategy != null && overrideMappingStrategy != MappingStrategy.NONE
         ) {
             overrideMappingStrategy
@@ -186,57 +192,69 @@ class ShapeShift internal constructor(
         }
     }
 
-    private fun getFieldInstanceByNodes(nodes: List<Field>, target: Any?, type: SourceType): ObjectFieldTrio? {
+    private fun getFromPairInstanceByNodes(nodes: List<KProperty1<*, *>>, target: Any?): ObjectPropertyTrio? {
         // This if only applies to recursive runs of this function
         // When target is null and type is from, don't attempt to instantiate the object
         if (target == null) {
-            if (type == SourceType.FROM) {
-                return null
-            } else {
-                // Impossible to reach
-                error("$nodes leads to a null target")
-            }
+            return null
         }
-        val field = nodes.first()
 
-        val fieldType = field.type.kotlin.javaObjectType
+        val property = nodes.first()
 
         if (nodes.size == 1) {
-            return ObjectFieldTrio(target, field, field.getTrueType())
-        }
-        field.isAccessible = true
-        var subTarget = field.get(target)
-
-        if (subTarget == null && type == SourceType.TO) {
-            subTarget = initializeObject(fieldType)
-            field.set(target, subTarget)
+            return ObjectPropertyTrio(target, property, property.getTrueType())
         }
 
-        return getFieldInstanceByNodes(nodes.drop(1), subTarget, type)
+        property.isAccessible = true
+        var subTarget = property.getter.call(target)
+
+        return getFromPairInstanceByNodes(nodes.drop(1), subTarget)
     }
 
-    private fun getTransformerByType(type: Class<out MappingTransformer<out Any?, out Any?>>): MappingTransformerRegistration<out Any?, out Any?> {
+    private fun getToPairInstanceByNodes(nodes: List<KProperty1<*, *>>, target: Any?): ObjectPropertyTrio? {
+        // This if only applies to recursive runs of this function
+        // When target is null and type is from, don't attempt to instantiate the object
+        if (target == null) {
+            error("$nodes leads to a null target")
+        }
+
+        val property = nodes.first()
+
+        if (nodes.size == 1) {
+            return ObjectPropertyTrio(target, property, property.getTrueType())
+        }
+        property.isAccessible = true
+        var subTarget = property.getter.call(target)
+
+        if (subTarget == null) {
+            subTarget = initializeObject(property.type())
+            property.setEffectiveValue(target, subTarget)
+        }
+
+        return getToPairInstanceByNodes(nodes.drop(1), subTarget)
+    }
+
+    private fun getTransformerByType(type: Class<out MappingTransformer<out Any?, out Any?>>): MappingTransformerRegistration<out Any, out Any> {
         return transformersByTypeCache.computeIfAbsent(type) { _ ->
             transformerRegistrations.find { it.transformer::class.java == type } ?: MappingTransformerRegistration.EMPTY
         }
     }
 
-    private fun getMappingStructure(fromClass: Class<*>, toClass: Class<*>): MappingStructure {
+    private fun getMappingStructure(fromClass: KClass<*>, toClass: KClass<*>): MappingStructure {
         val key = ClassPair(fromClass, toClass)
         return mappingStructures.computeIfAbsent(key) {
             val resolutions = mappingDefinitionResolvers
                 .mapNotNull { it.resolve(fromClass, toClass) }
 
-            MappingStructure(fromClass, toClass, resolutions.flatMap { it.resolvedMappedFields })
+            MappingStructure(fromClass, toClass, resolutions.flatMap { it.resolvedMappedProperties })
         }
     }
 
-    private fun <From : Any, To : Any> getDecorators(classPair: ClassPair<From, To>): List<MappingDecorator<From, To>> {
+    private fun <From: Any, To: Any> getDecorators(classPair: ClassPair<From, To>): List<MappingDecorator<From, To>> {
         return decoratorCache.computeIfAbsent(classPair) {
             decoratorRegistrations
                 .filter { decoratorRegistration ->
-                    val id = decoratorRegistration.id
-                    id == classPair
+                    decoratorRegistration.id == classPair
                 }
                 .map { decoratorRegistrations ->
                     decoratorRegistrations.decorator
@@ -246,8 +264,8 @@ class ShapeShift internal constructor(
 
     private fun getTransformer(
         coordinates: TransformerCoordinates,
-        fromPair: ObjectFieldTrio,
-        toPair: ObjectFieldTrio
+        fromPair: ObjectPropertyTrio,
+        toPair: ObjectPropertyTrio
     ): MappingTransformerRegistration<*, *> {
         var transformerRegistration: MappingTransformerRegistration<*, *> = MappingTransformerRegistration.EMPTY
         if (transformerRegistration == MappingTransformerRegistration.EMPTY) {
@@ -286,44 +304,43 @@ class ShapeShift internal constructor(
         if (supplier != null) {
             return supplier.get() as Type
         }
-        val constructor = clazz.constructors.firstOrNull { it.parameterCount == 0 }
+        val constructor = clazz.constructors?.find { it.parameters.size == 0 }
         if (constructor != null) {
             return constructor.newInstance() as Type
         }
         error("Could not find a no-arg constructor or object supplier for class $clazz")
     }
 
-    private val Field.isContainer: Boolean get() = type in containerAdapters
+    private val KProperty1<*, *>.isContainer: Boolean get() = type() in containerAdapters
 
-    private fun Field.getEffectiveValue(target: Any): Any? {
-        val value = getValue(target)
+    private fun KProperty1<*, *>.getEffectiveValue(target: Any): Any? {
+        val value = getter.call(target)
         if (isContainer) {
-            return (containerAdapters[type] as ContainerAdapter<Any?>).unwrapValue(value)
+            return (containerAdapters[type()] as ContainerAdapter<Any?>).unwrapValue(value)
         }
         return value
     }
 
-    private fun Field.setEffectiveValue(target: Any, value: Any?) {
-        val value = if (isContainer) {
-            (containerAdapters[type] as ContainerAdapter<Any?>).wrapValue(value)
+    private fun KProperty1<*, *>.setEffectiveValue(target: Any, value: Any?) {
+        val effectiveValue = if (isContainer) {
+            containerAdapters[type()]?.wrapValue(value)
         } else {
             value
         }
-        setValue(target, value)
-    }
 
-    private fun Field.getTrueType(): Class<*> {
-        return if (isContainer) {
-            (containerAdapters[type] as ContainerAdapter<Any?>).getTrueType(this)
+        if (this is KMutableProperty1) {
+            setter.call(target, effectiveValue)
         } else {
-            type.kotlin.javaObjectType
+            javaField?.setValue(target, effectiveValue)
         }
     }
 
-    companion object {
-        enum class SourceType {
-            FROM,
-            TO
+    private fun KProperty1<*, *>.getTrueType(): KClass<*> {
+        return if (isContainer) {
+            val type = type()
+            ((containerAdapters[type] as ContainerAdapter<Any?>).getTrueType(this) ?: type).kotlin
+        } else {
+            type().kotlin
         }
     }
 }

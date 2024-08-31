@@ -18,12 +18,11 @@ import dev.krud.shapeshift.resolver.annotation.DefaultMappingTarget
 import dev.krud.shapeshift.resolver.annotation.MappedField
 import dev.krud.shapeshift.transformer.base.MappingTransformer
 import dev.krud.shapeshift.transformer.base.MappingTransformerContext
-import java.util.*
+import java.util.Date
 
 class ExampleFieldTransformer : MappingTransformer<Long, Date> {
     override fun transform(context: MappingTransformerContext<out Long>): Date? {
-        context.originalValue ?: return null
-        return Date(context.originalValue!!)
+        return context.originalValue?.let { Date(it) }
     }
 }
 

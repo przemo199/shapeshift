@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEqualTo
-import kotlin.reflect.jvm.javaField
 
 internal class KotlinDslMappingDefinitionBuilderTests {
     @Nested
@@ -254,9 +253,9 @@ internal class KotlinDslMappingDefinitionBuilderTests {
             From::child..From.Child::string mappedTo To::string
         }
 
-        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedFields.first()
-        expectThat(resolvedMappedField.mapFromCoordinates)
-            .isEqualTo(listOf(From::child.javaField!!, From.Child::string.javaField!!))
+        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedProperties.first()
+        expectThat(resolvedMappedField.mapFromProperties)
+            .isEqualTo(listOf(From::child, From.Child::string))
     }
 
     @Test
@@ -265,9 +264,9 @@ internal class KotlinDslMappingDefinitionBuilderTests {
             From::string mappedTo To::child..To.Child::string
         }
 
-        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedFields.first()
-        expectThat(resolvedMappedField.mapToCoordinates)
-            .isEqualTo(listOf(To::child.javaField!!, To.Child::string.javaField!!))
+        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedProperties.first()
+        expectThat(resolvedMappedField.mapToProperties)
+            .isEqualTo(listOf(To::child, To.Child::string))
     }
 
     @Test
@@ -276,9 +275,9 @@ internal class KotlinDslMappingDefinitionBuilderTests {
             From::child..From.Child::grandChild..From.GrandChild::string mappedTo To::string
         }
 
-        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedFields.first()
-        expectThat(resolvedMappedField.mapFromCoordinates)
-            .isEqualTo(listOf(From::child.javaField!!, From.Child::grandChild.javaField!!, From.GrandChild::string.javaField!!))
+        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedProperties.first()
+        expectThat(resolvedMappedField.mapFromProperties)
+            .isEqualTo(listOf(From::child, From.Child::grandChild, From.GrandChild::string))
     }
 
     @Test
@@ -287,9 +286,9 @@ internal class KotlinDslMappingDefinitionBuilderTests {
             From::nullableChild..From.Child::string mappedTo To::string
         }
 
-        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedFields.first()
-        expectThat(resolvedMappedField.mapFromCoordinates)
-            .isEqualTo(listOf(From::nullableChild.javaField!!, From.Child::string.javaField!!))
+        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedProperties.first()
+        expectThat(resolvedMappedField.mapFromProperties)
+            .isEqualTo(listOf(From::nullableChild, From.Child::string))
     }
 
     @Test
@@ -298,9 +297,9 @@ internal class KotlinDslMappingDefinitionBuilderTests {
             From::nullableChild..From.Child::nullableString mappedTo To::string
         }
 
-        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedFields.first()
-        expectThat(resolvedMappedField.mapFromCoordinates)
-            .isEqualTo(listOf(From::nullableChild.javaField!!, From.Child::nullableString.javaField!!))
+        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedProperties.first()
+        expectThat(resolvedMappedField.mapFromProperties)
+            .isEqualTo(listOf(From::nullableChild, From.Child::nullableString))
     }
 
     @Test
@@ -309,9 +308,9 @@ internal class KotlinDslMappingDefinitionBuilderTests {
             From::nullableChild..From.Child::nullableGrandChild..From.GrandChild::string mappedTo To::string
         }
 
-        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedFields.first()
-        expectThat(resolvedMappedField.mapFromCoordinates)
-            .isEqualTo(listOf(From::nullableChild.javaField!!, From.Child::nullableGrandChild.javaField!!, From.GrandChild::string.javaField!!))
+        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedProperties.first()
+        expectThat(resolvedMappedField.mapFromProperties)
+            .isEqualTo(listOf(From::nullableChild, From.Child::nullableGrandChild, From.GrandChild::string))
     }
 
     @Test
@@ -320,9 +319,9 @@ internal class KotlinDslMappingDefinitionBuilderTests {
             From::nullableChild..From.Child::nullableGrandChild..From.GrandChild::nullableString mappedTo To::string
         }
 
-        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedFields.first()
-        expectThat(resolvedMappedField.mapFromCoordinates)
-            .isEqualTo(listOf(From::nullableChild.javaField!!, From.Child::nullableGrandChild.javaField!!, From.GrandChild::nullableString.javaField!!))
+        val resolvedMappedField = mapping.mappingDefinition.resolvedMappedProperties.first()
+        expectThat(resolvedMappedField.mapFromProperties)
+            .isEqualTo(listOf(From::nullableChild, From.Child::nullableGrandChild, From.GrandChild::nullableString))
     }
 }
 

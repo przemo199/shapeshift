@@ -10,13 +10,13 @@
 
 package dev.krud.shapeshift.container
 
-import java.lang.reflect.Field
+import kotlin.reflect.KProperty
 
 interface ContainerAdapter<ContainerType> {
 
     val containerClazz: Class<ContainerType>
 
-    fun getTrueType(field: Field): Class<*>
+    fun getTrueType(field: KProperty<*>): Class<*>?
 
     fun unwrapValue(container: ContainerType): Any?
 

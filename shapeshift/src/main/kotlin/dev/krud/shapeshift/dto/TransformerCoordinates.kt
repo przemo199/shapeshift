@@ -21,7 +21,7 @@ data class TransformerCoordinates(
         fun ofType(
             type: Class<out MappingTransformer<out Any?, out Any?>>
         ): TransformerCoordinates {
-            if (type == EmptyTransformer::class.java) {
+            if (EmptyTransformer::class.java == type) {
                 return NONE
             }
             return TransformerCoordinates(type = type)
