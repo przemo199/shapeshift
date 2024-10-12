@@ -28,7 +28,7 @@ internal fun <From: Any, To: Any> getAutoMappings(fromClazz: KClass<From>, toCla
         val toProperty = toProperties.find {
             when (strategy) {
                 AutoMappingStrategy.BY_NAME -> it.name == fromProperty.name
-                AutoMappingStrategy.BY_NAME_AND_TYPE -> it.name == fromProperty.name && it.type().kotlin == fromProperty.type().kotlin
+                AutoMappingStrategy.BY_NAME_AND_TYPE -> it.name == fromProperty.name && it.type() == fromProperty.type()
                 else -> error("Unsupported auto mapping strategy")
             }
         } ?: continue

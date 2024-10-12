@@ -55,7 +55,7 @@ class ShapeShiftBuilder {
     private var defaultMappingStrategy: MappingStrategy = MappingStrategy.MAP_NOT_NULL
     private val mappingDefinitions: MutableList<MappingDefinition> = mutableListOf()
     private val objectSuppliers: MutableMap<Class<*>, Supplier<*>> = mutableMapOf()
-    private val containerAdapters: MutableMap<Class<*>, ContainerAdapter<out Any>> = mutableMapOf()
+    private val containerAdapters: MutableMap<KClass<*>, ContainerAdapter<out Any>> = mutableMapOf()
 
     init {
         // Add default annotation resolver
@@ -67,7 +67,7 @@ class ShapeShiftBuilder {
         }
 
         // Default container adapters
-        containerAdapters[Optional::class.java] = OptionalContainerAdapter()
+        containerAdapters[Optional::class] = OptionalContainerAdapter()
     }
 
     /**
@@ -141,7 +141,7 @@ class ShapeShiftBuilder {
         builder.block()
         val (mappingDefinitions, decorators) = builder.build()
         withMapping(mappingDefinitions)
-        decorators.forEach { withDecorator(it) }
+        decorators.forEach(::withDecorator)
         return this
     }
 

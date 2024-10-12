@@ -34,7 +34,7 @@ class MappingDefinitionBuilder(val fromClazz: KClass<out Any>, val toClazz: KCla
      * Automatically map all fields with the given strategy
      */
     fun autoMap(strategy: AutoMappingStrategy): MappingDefinitionBuilder {
-        this.autoMappingStrategy = strategy
+        autoMappingStrategy = strategy
         return this
     }
 
@@ -136,7 +136,7 @@ class MappingDefinitionBuilder(val fromClazz: KClass<out Any>, val toClazz: KCla
          * Java Example: `withTransformer(IntegerToStringTransoformer.class)`
          */
         fun withTransformer(transformerClazz: Class<out MappingTransformer<out Any, out Any>>): MapFieldBuilder {
-            this.transformerCoordinates = TransformerCoordinates.ofType(transformerClazz)
+            transformerCoordinates = TransformerCoordinates.ofType(transformerClazz)
             return this
         }
 
@@ -175,6 +175,6 @@ class MappingDefinitionBuilder(val fromClazz: KClass<out Any>, val toClazz: KCla
             return emptyList()
         }
         val realField = clazz.getDeclaredPropertyRecursive(nodes.first())
-        return listOf(realField) + resolveNodes(nodes.drop(1), realField.type().kotlin)
+        return listOf(realField) + resolveNodes(nodes.drop(1), realField.type())
     }
 }

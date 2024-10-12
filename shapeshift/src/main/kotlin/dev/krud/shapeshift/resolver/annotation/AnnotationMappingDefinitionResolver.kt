@@ -85,14 +85,14 @@ class AnnotationMappingDefinitionResolver : MappingDefinitionResolver {
                 error("Unable to determine mapped field for $clazz")
             }
             val realField = clazz.getDeclaredPropertyRecursive(nodes.first())
-            return resolveNodesToFields(nodes.drop(1), realField, realField.type().kotlin)
+            return resolveNodesToFields(nodes.drop(1), realField, realField.type())
         }
 
         if (nodes.isEmpty()) {
             return listOf(field)
         }
-        val nextField = field.type().kotlin.getDeclaredPropertyRecursive(nodes.first())
-        return listOf(field) + resolveNodesToFields(nodes.drop(1), nextField, nextField.type().kotlin)
+        val nextField = field.type().getDeclaredPropertyRecursive(nodes.first())
+        return listOf(field) + resolveNodesToFields(nodes.drop(1), nextField, nextField.type())
     }
 
     private fun getMappedFields(fromClass: KClass<*>, toClass: KClass<*>): List<MappedFieldReference> {

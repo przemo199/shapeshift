@@ -26,10 +26,8 @@ import dev.krud.shapeshift.transformer.base.MappingTransformer
 import dev.krud.shapeshift.transformer.base.MappingTransformerContext
 import dev.krud.shapeshift.util.ClassPair
 import dev.krud.shapeshift.util.concurrentMapOf
-import dev.krud.shapeshift.util.getValue
 import dev.krud.shapeshift.util.setValue
 import dev.krud.shapeshift.util.type
-import java.lang.reflect.Field
 import java.util.function.Supplier
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty1
@@ -43,7 +41,7 @@ class ShapeShift internal constructor(
     val defaultMappingStrategy: MappingStrategy,
     val decoratorRegistrations: Set<MappingDecoratorRegistration<out Any, out Any>>,
     val objectSuppliers: Map<Class<*>, Supplier<*>>,
-    val containerAdapters: Map<Class<*>, ContainerAdapter<out Any>>
+    val containerAdapters: Map<KClass<*>, ContainerAdapter<out Any>>
 ) {
     val transformerRegistrations: MutableList<MappingTransformerRegistration<out Any, out Any>> = mutableListOf()
     internal val transformersByTypeCache: MutableMap<Class<out MappingTransformer<out Any?, out Any?>>, MappingTransformerRegistration<out Any, out Any>> =
@@ -168,8 +166,8 @@ class ShapeShift internal constructor(
     }
 
     private fun ResolvedMappedProperty.conditionMatches(value: Any?): Boolean {
-        val condition = this.condition
-            ?: this.conditionClazz?.getCachedInstance()
+        val condition = condition
+            ?: conditionClazz?.getCachedInstance()
             ?: return true
         condition as MappingCondition<Any>
         val context = MappingConditionContext(value, this@ShapeShift)
@@ -188,7 +186,7 @@ class ShapeShift internal constructor(
     private fun Class<out MappingCondition<*>>?.getCachedInstance(): MappingCondition<*>? {
         this ?: return null
         return conditionCache.computeIfAbsent(this) {
-            this.getDeclaredConstructor().newInstance()
+            getDeclaredConstructor().newInstance()
         }
     }
 
@@ -227,7 +225,7 @@ class ShapeShift internal constructor(
         var subTarget = property.getter.call(target)
 
         if (subTarget == null) {
-            subTarget = initializeObject(property.type())
+            subTarget = initializeObject(property.type().java)
             property.setEffectiveValue(target, subTarget)
         }
 
@@ -316,7 +314,7 @@ class ShapeShift internal constructor(
     private fun KProperty1<*, *>.getEffectiveValue(target: Any): Any? {
         val value = getter.call(target)
         if (isContainer) {
-            return (containerAdapters[type()] as ContainerAdapter<Any?>).unwrapValue(value)
+            return (containerAdapters[type()] as ContainerAdapter<Any>).unwrapValue(value)
         }
         return value
     }
@@ -337,10 +335,9 @@ class ShapeShift internal constructor(
 
     private fun KProperty1<*, *>.getTrueType(): KClass<*> {
         return if (isContainer) {
-            val type = type()
-            ((containerAdapters[type] as ContainerAdapter<Any?>).getTrueType(this) ?: type).kotlin
+            (containerAdapters[type()] as ContainerAdapter<*>).getTrueType(this)
         } else {
-            type().kotlin
+            type()
         }
     }
 }

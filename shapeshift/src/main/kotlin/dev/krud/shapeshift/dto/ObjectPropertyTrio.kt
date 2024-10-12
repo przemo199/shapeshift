@@ -10,7 +10,6 @@
 
 package dev.krud.shapeshift.dto
 
-import dev.krud.shapeshift.util.type
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 

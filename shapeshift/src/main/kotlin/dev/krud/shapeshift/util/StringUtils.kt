@@ -11,7 +11,7 @@
 package dev.krud.shapeshift.util
 
 internal fun CharSequence.splitIgnoreEmpty(vararg delimiters: String): List<String> {
-    return this.split(*delimiters).filter {
+    return split(*delimiters).filter {
         it.isNotEmpty()
     }
 }

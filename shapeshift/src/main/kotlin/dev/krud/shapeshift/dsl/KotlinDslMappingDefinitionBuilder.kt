@@ -54,7 +54,7 @@ class KotlinDslMappingDefinitionBuilder<RootFrom : Any, RootTo : Any>(
     }
 
     operator fun <Root: Any, Parent: Any, Child: Any, ChildValue : Any?> PropertyCoordinates<Root, Parent, Child?>.rangeTo(other: KProperty1<Child, ChildValue?>): PropertyCoordinates<Root, Child, ChildValue?> {
-        this.properties.add(other as KProperty1<Parent, Child>)
+        properties.add(other as KProperty1<Parent, Child>)
         return this as PropertyCoordinates<Root, Child, ChildValue?>
     }
 

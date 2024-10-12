@@ -13,33 +13,20 @@
 package dev.krud.shapeshift.util
 
 import java.lang.reflect.Field
-import java.lang.reflect.ParameterizedType
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.superclasses
-import kotlin.reflect.jvm.javaField
 
 data class ClassPair<From: Any, To: Any>(val from: KClass<out From>, val to: KClass<out To>)
 
 internal fun Field.getValue(target: Any): Any? {
-    return this.get(target)
+    return get(target)
 }
 
 internal fun Field.setValue(target: Any, value: Any?) {
-    this.set(target, value)
-}
-
-internal fun Class<*>.getDeclaredFieldsRecursive(): List<Field> {
-    var clazz: Class<*>? = this
-    val fields = mutableListOf<Field>()
-    while (clazz != null) {
-        fields += clazz.declaredFields
-        clazz = clazz.superclass
-    }
-
-    return fields
+    set(target, value)
 }
 
 internal fun KClass<*>?.getDeclaredPropertyRecursive(name: String): KProperty1<*, *> {
@@ -55,11 +42,12 @@ internal fun KClass<*>?.getDeclaredPropertyRecursive(name: String): KProperty1<*
     throw NoSuchFieldException(name)
 }
 
-internal fun Field.getGenericAtPosition(position: Int): Class<*> {
-    if (genericType !is ParameterizedType) {
-        error("Type ${this.type} is not parameterized")
+internal fun KProperty<*>.getGenericAtPosition(position: Int): KClass<*> {
+    val arguments = returnType.arguments
+    if (arguments.isEmpty()) {
+        error("Type $returnType is not parameterized")
     }
-    return (genericType as ParameterizedType).actualTypeArguments[position] as Class<*>
+    return arguments[position].type?.classifier as KClass<*>
 }
 
-fun KProperty<*>.type(): Class<*> = ((this.returnType?.classifier as KClass<*>?) ?: (this.javaField?.type as KClass<*>)).java
+fun KProperty<*>.type(): KClass<*> = returnType.classifier as KClass<*>
