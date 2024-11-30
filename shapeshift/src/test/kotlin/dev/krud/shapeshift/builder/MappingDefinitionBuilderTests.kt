@@ -70,7 +70,7 @@ class MappingDefinitionBuilderTests {
             .withMapping(
                 MappingDefinitionBuilder(From::class, To::class)
                     .mapField("name", "name")
-                    .mapField("age", "age").withCondition(Above31Condition::class.java)
+                    .mapField("age", "age").withCondition(Above31Condition::class)
                     .build()
             )
             .build()
@@ -88,14 +88,13 @@ class MappingDefinitionBuilderTests {
             .excludeDefaultTransformers()
             .withMapping(
                 MappingDefinitionBuilder(From::class, To::class)
-                    .mapField("age", "age").withTransformer { ctx -> ctx.originalValue as Int + 1 }
+                    .mapField("age", "age").withTransformer { ctx -> (ctx.originalValue as Int) + 1 }
                     .build()
             )
             .build()
         val original = From()
         val result = shapeShift.map<From, To>(original)
-        expectThat(result.age)
-            .isEqualTo(original.age + 1)
+        expectThat(result.age).isEqualTo(original.age + 1)
     }
 
     @Test
@@ -105,14 +104,13 @@ class MappingDefinitionBuilderTests {
             .withTransformer(AddOneTransformer())
             .withMapping(
                 MappingDefinitionBuilder(From::class, To::class)
-                    .mapField("age", "age").withTransformer(AddOneTransformer::class.java)
+                    .mapField("age", "age").withTransformer(AddOneTransformer::class)
                     .build()
             )
             .build()
         val original = From()
         val result = shapeShift.map<From, To>(original)
-        expectThat(result.age)
-            .isEqualTo(original.age + 1)
+        expectThat(result.age).isEqualTo(original.age + 1)
     }
 
     @Test
@@ -128,8 +126,7 @@ class MappingDefinitionBuilderTests {
             .build()
         val original = From()
         val result = shapeShift.map<From, To>(original)
-        expectThat(result.profession)
-            .isNull()
+        expectThat(result.profession).isNull()
     }
 
     @Test

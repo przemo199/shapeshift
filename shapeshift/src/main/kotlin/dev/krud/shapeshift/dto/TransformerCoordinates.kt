@@ -12,19 +12,20 @@ package dev.krud.shapeshift.dto
 
 import dev.krud.shapeshift.transformer.EmptyTransformer
 import dev.krud.shapeshift.transformer.base.MappingTransformer
+import kotlin.reflect.KClass
 
 data class TransformerCoordinates(
-    val type: Class<out MappingTransformer<out Any?, out Any?>>? = null
+    val type: KClass<out MappingTransformer<out Any?, out Any?>>? = null
 ) {
     companion object {
         val NONE = TransformerCoordinates()
         fun ofType(
-            type: Class<out MappingTransformer<out Any?, out Any?>>
+            type: KClass<out MappingTransformer<out Any?, out Any?>>
         ): TransformerCoordinates {
-            if (EmptyTransformer::class.java == type) {
+            if (EmptyTransformer::class == type) {
                 return NONE
             }
-            return TransformerCoordinates(type = type)
+            return TransformerCoordinates(type)
         }
     }
 }

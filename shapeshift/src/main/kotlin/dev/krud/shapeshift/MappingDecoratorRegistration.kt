@@ -12,7 +12,7 @@ package dev.krud.shapeshift
 
 import dev.krud.shapeshift.decorator.EmptyDecorator
 import dev.krud.shapeshift.decorator.MappingDecorator
-import dev.krud.shapeshift.util.ClassPair
+import dev.krud.shapeshift.util.KClassPair
 import kotlin.reflect.KClass
 
 data class MappingDecoratorRegistration<From: Any, To: Any>(
@@ -27,7 +27,7 @@ data class MappingDecoratorRegistration<From: Any, To: Any>(
             EmptyDecorator
         )
 
-        val <From : Any, To : Any> MappingDecoratorRegistration<From, To>.id: ClassPair<From, To> get() = ClassPair(fromClazz, toClazz)
+        val <From : Any, To : Any> MappingDecoratorRegistration<From, To>.id: KClassPair<From, To> get() = KClassPair(fromClazz, toClazz)
 
         inline fun <reified From : Any, reified To : Any> MappingDecorator<From, To>.toRegistration(): MappingDecoratorRegistration<From, To> {
             return MappingDecoratorRegistration(From::class, To::class, this)

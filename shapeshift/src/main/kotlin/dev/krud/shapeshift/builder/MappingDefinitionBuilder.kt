@@ -75,7 +75,7 @@ class MappingDefinitionBuilder(val fromClazz: KClass<out Any>, val toClazz: KCla
 
     inner class MapFieldBuilder(val from: String, val to: String) {
         private var condition: MappingCondition<out Any>? = null
-        private var conditionClazz: Class<out MappingCondition<out Any>>? = null
+        private var conditionClazz: KClass<out MappingCondition<out Any>>? = null
         private var transformer: MappingTransformer<out Any, out Any>? = null
         private var transformerCoordinates: TransformerCoordinates = TransformerCoordinates.NONE
         private var mappingStrategy: MappingStrategy? = null
@@ -117,7 +117,7 @@ class MappingDefinitionBuilder(val fromClazz: KClass<out Any>, val toClazz: KCla
          * Specify a condition reference to use for this mapped field
          * Java Example: `withCondition(Above18Condition.class)`
          */
-        fun withCondition(conditionClazz: Class<out MappingCondition<out Any>>): MapFieldBuilder {
+        fun withCondition(conditionClazz: KClass<out MappingCondition<out Any>>): MapFieldBuilder {
             this.conditionClazz = conditionClazz
             return this
         }
@@ -135,7 +135,7 @@ class MappingDefinitionBuilder(val fromClazz: KClass<out Any>, val toClazz: KCla
          * Specify a transformer reference to use for this mapped field
          * Java Example: `withTransformer(IntegerToStringTransoformer.class)`
          */
-        fun withTransformer(transformerClazz: Class<out MappingTransformer<out Any, out Any>>): MapFieldBuilder {
+        fun withTransformer(transformerClazz: KClass<out MappingTransformer<out Any, out Any>>): MapFieldBuilder {
             transformerCoordinates = TransformerCoordinates.ofType(transformerClazz)
             return this
         }

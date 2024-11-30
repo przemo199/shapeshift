@@ -15,7 +15,7 @@ import java.util.Optional
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
-class OptionalContainerAdapter: ContainerAdapter<Optional<*>> {
+class OptionalContainerAdapter : ContainerAdapter<Optional<*>> {
     override val containerClazz: KClass<Optional<*>> = Optional::class
 
     override fun getTrueType(property: KProperty<*>): KClass<*> {

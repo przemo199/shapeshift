@@ -12,7 +12,7 @@ package dev.krud.shapeshift
 
 import dev.krud.shapeshift.transformer.EmptyTransformer
 import dev.krud.shapeshift.transformer.base.MappingTransformer
-import dev.krud.shapeshift.util.ClassPair
+import dev.krud.shapeshift.util.KClassPair
 import kotlin.reflect.KClass
 
 data class MappingTransformerRegistration<From : Any, To : Any>(
@@ -29,7 +29,7 @@ data class MappingTransformerRegistration<From : Any, To : Any>(
             false
         )
 
-        val <From : Any, To : Any> MappingTransformerRegistration<From, To>.id: ClassPair<From, To> get() = ClassPair(fromClazz, toClazz)
+        val <From : Any, To : Any> MappingTransformerRegistration<From, To>.id: KClassPair<From, To> get() = KClassPair(fromClazz, toClazz)
 
         inline fun <reified From : Any, reified To : Any> MappingTransformer<From, To>.toRegistration(default: Boolean = false): MappingTransformerRegistration<From, To> {
             return MappingTransformerRegistration(

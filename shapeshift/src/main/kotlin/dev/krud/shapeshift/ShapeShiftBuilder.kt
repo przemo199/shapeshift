@@ -39,7 +39,7 @@ import dev.krud.shapeshift.transformer.StringToIntMappingTransformer
 import dev.krud.shapeshift.transformer.StringToLongMappingTransformer
 import dev.krud.shapeshift.transformer.StringToShortMappingTransformer
 import dev.krud.shapeshift.transformer.base.MappingTransformer
-import java.util.*
+import java.util.Optional
 import java.util.function.Supplier
 import kotlin.reflect.KClass
 
@@ -54,7 +54,7 @@ class ShapeShiftBuilder {
     private val resolvers: MutableSet<MappingDefinitionResolver> = mutableSetOf()
     private var defaultMappingStrategy: MappingStrategy = MappingStrategy.MAP_NOT_NULL
     private val mappingDefinitions: MutableList<MappingDefinition> = mutableListOf()
-    private val objectSuppliers: MutableMap<Class<*>, Supplier<*>> = mutableMapOf()
+    private val objectSuppliers: MutableMap<KClass<*>, Supplier<*>> = mutableMapOf()
     private val containerAdapters: MutableMap<KClass<*>, ContainerAdapter<out Any>> = mutableMapOf()
 
     init {
@@ -62,9 +62,7 @@ class ShapeShiftBuilder {
         withResolver(AnnotationMappingDefinitionResolver())
 
         // Add default transformers
-        DEFAULT_TRANSFORMERS.forEach {
-            withTransformer(it)
-        }
+        DEFAULT_TRANSFORMERS.forEach(::withTransformer)
 
         // Default container adapters
         containerAdapters[Optional::class] = OptionalContainerAdapter()
@@ -154,10 +152,10 @@ class ShapeShiftBuilder {
     }
 
     inline fun <reified Object : Any> withObjectSupplier(objectSupplier: Supplier<Object>): ShapeShiftBuilder {
-        return withObjectSupplier(objectSupplier, Object::class.java)
+        return withObjectSupplier(objectSupplier, Object::class)
     }
 
-    fun <Object : Any> withObjectSupplier(objectSupplier: Supplier<Object>, clazz: Class<Object>): ShapeShiftBuilder {
+    fun <Object : Any> withObjectSupplier(objectSupplier: Supplier<Object>, clazz: KClass<Object>): ShapeShiftBuilder {
         objectSuppliers[clazz] = objectSupplier
         return this
     }
@@ -186,7 +184,7 @@ class ShapeShiftBuilder {
     }
 
     companion object {
-        private val DEFAULT_TRANSFORMERS = setOf<MappingTransformerRegistration<out Any, out Any>>(
+        private val DEFAULT_TRANSFORMERS = setOf(
             AnyToStringMappingTransformer().toRegistration(true),
             StringToBooleanMappingTransformer().toRegistration(true),
             StringToCharMappingTransformer().toRegistration(true),

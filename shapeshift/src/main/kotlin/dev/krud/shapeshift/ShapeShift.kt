@@ -24,7 +24,7 @@ import dev.krud.shapeshift.dto.TransformerCoordinates
 import dev.krud.shapeshift.resolver.MappingDefinitionResolver
 import dev.krud.shapeshift.transformer.base.MappingTransformer
 import dev.krud.shapeshift.transformer.base.MappingTransformerContext
-import dev.krud.shapeshift.util.ClassPair
+import dev.krud.shapeshift.util.KClassPair
 import dev.krud.shapeshift.util.concurrentMapOf
 import dev.krud.shapeshift.util.setValue
 import dev.krud.shapeshift.util.type
@@ -32,6 +32,7 @@ import java.util.function.Supplier
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty1
 import kotlin.reflect.KProperty1
+import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaField
 
@@ -40,16 +41,16 @@ class ShapeShift internal constructor(
     val mappingDefinitionResolvers: Set<MappingDefinitionResolver>,
     val defaultMappingStrategy: MappingStrategy,
     val decoratorRegistrations: Set<MappingDecoratorRegistration<out Any, out Any>>,
-    val objectSuppliers: Map<Class<*>, Supplier<*>>,
+    val objectSuppliers: Map<KClass<*>, Supplier<*>>,
     val containerAdapters: Map<KClass<*>, ContainerAdapter<out Any>>
 ) {
     val transformerRegistrations: MutableList<MappingTransformerRegistration<out Any, out Any>> = mutableListOf()
-    internal val transformersByTypeCache: MutableMap<Class<out MappingTransformer<out Any?, out Any?>>, MappingTransformerRegistration<out Any, out Any>> =
+    internal val transformersByTypeCache: MutableMap<KClass<out MappingTransformer<out Any?, out Any?>>, MappingTransformerRegistration<out Any, out Any>> =
         concurrentMapOf()
-    internal val defaultTransformers: MutableMap<ClassPair<out Any, out Any>, MappingTransformerRegistration<out Any, out Any>> = mutableMapOf()
-    private val mappingStructures: MutableMap<ClassPair<out Any, out Any>, MappingStructure> = concurrentMapOf()
-    private val conditionCache: MutableMap<Class<out MappingCondition<*>>, MappingCondition<*>> = concurrentMapOf()
-    private val decoratorCache: MutableMap<ClassPair<out Any, out Any>, List<MappingDecorator<*, *>>> = concurrentMapOf()
+    internal val defaultTransformers: MutableMap<KClassPair<out Any, out Any>, MappingTransformerRegistration<out Any, out Any>> = mutableMapOf()
+    private val mappingStructures: MutableMap<KClassPair<out Any, out Any>, MappingStructure> = concurrentMapOf()
+    private val conditionCache: MutableMap<KClass<out MappingCondition<*>>, MappingCondition<*>> = concurrentMapOf()
+    private val decoratorCache: MutableMap<KClassPair<out Any, out Any>, List<MappingDecorator<*, *>>> = concurrentMapOf()
 
     init {
         if (defaultMappingStrategy == MappingStrategy.NONE) {
@@ -60,15 +61,19 @@ class ShapeShift internal constructor(
         }
     }
 
-    inline fun <From: Any, reified To: Any> map(fromObject: From): To {
-        return map(fromObject, To::class.java)
+    inline fun <From : Any, reified To : Any> map(fromObject: From): To {
+        return map(fromObject, To::class)
+    }
+
+    fun <From : Any, To : Any> map(fromObject: From, toClazz: Class<To>): To {
+        return map(fromObject, toClazz.kotlin)
     }
 
     /**
      * Map between the [fromObject] and a new instance of [toClazz]
      * [toClazz] MUST have a no-arg constructor when using this override
      */
-    fun <From : Any, To : Any> map(fromObject: From, toClazz: Class<To>): To {
+    fun <From : Any, To : Any> map(fromObject: From, toClazz: KClass<To>): To {
         val toObject = initializeObject(toClazz)
         return map(fromObject, toObject)
     }
@@ -76,7 +81,7 @@ class ShapeShift internal constructor(
     /**
      * Map between the [fromObject] and [toObject] objects
      */
-    fun <From: Any, To: Any> map(fromObject: From, toObject: To): To {
+    fun <From : Any, To : Any> map(fromObject: From, toObject: To): To {
         val toClazz = toObject::class
         val mappingStructure = getMappingStructure(fromObject::class, toClazz)
 
@@ -84,8 +89,8 @@ class ShapeShift internal constructor(
             mapProperty(fromObject, toObject, resolvedMappedProperty)
         }
 
-        val classPair = ClassPair(fromObject::class, toClazz)
-        val decorators = getDecorators<From, To>(classPair)
+        val KClassPair = KClassPair(fromObject::class, toClazz)
+        val decorators = getDecorators<From, To>(KClassPair)
         if (decorators.isNotEmpty()) {
             val context = MappingDecoratorContext(fromObject, toObject, this)
             for (decorator in decorators) {
@@ -99,7 +104,7 @@ class ShapeShift internal constructor(
     /**
      * Map [fromObjects] to a list of [toClazz] objects
      */
-    fun <From : Any, To : Any> mapCollection(fromObjects: Collection<From>, toClazz: Class<To>): List<To> {
+    fun <From : Any, To : Any> mapCollection(fromObjects: Collection<From>, toClazz: KClass<To>): List<To> {
         val toObjects = mutableListOf<To>()
         for (fromObject in fromObjects) {
             toObjects.add(map(fromObject, toClazz))
@@ -111,7 +116,7 @@ class ShapeShift internal constructor(
      * Map [fromObjects] to a list of [toClazz] objects
      */
     inline fun <From : Any, reified To : Any> mapCollection(fromObjects: Collection<From>): List<To> {
-        return mapCollection(fromObjects, To::class.java)
+        return mapCollection(fromObjects, To::class)
     }
 
     private fun <From : Any, To : Any> mapProperty(fromObject: From, toObject: To, resolvedMappedProperty: ResolvedMappedProperty) {
@@ -137,13 +142,11 @@ class ShapeShift internal constructor(
                 }
 
                 val valueToSet = if (resolvedMappedProperty.transformer != null) {
-                    val transformer = resolvedMappedProperty.transformer as MappingTransformer<Any, Any>
                     val context = MappingTransformerContext(fromValue, fromObject, toObject, fromPair.property, toPair.property, this)
-                    transformer.transform(context)
+                    (resolvedMappedProperty.transformer as MappingTransformer<Any, Any>).transform(context)
                 } else if (transformerRegistration != MappingTransformerRegistration.EMPTY) {
-                    val transformer = transformerRegistration.transformer as MappingTransformer<Any, Any>
                     val context = MappingTransformerContext(fromValue, fromObject, toObject, fromPair.property, toPair.property, this)
-                    transformer.transform(context)
+                    (transformerRegistration.transformer as MappingTransformer<Any, Any>).transform(context)
                 } else {
                     fromValue
                 }
@@ -151,9 +154,9 @@ class ShapeShift internal constructor(
                 if (valueToSet == null) {
                     toPair.property.setEffectiveValue(toPair.target, null)
                 } else {
-//                    if (!toPair.type.isSubclassOf(valueToSet::class)) {
-//                        error("Type mismatch: Expected ${toPair.type} but got ${valueToSet::class.java}")
-//                    }
+                    if (!toPair.type.isSubclassOf(valueToSet::class)) {
+                        error("Type mismatch: Expected ${toPair.type} but got ${valueToSet::class}")
+                    }
                     toPair.property.setEffectiveValue(toPair.target, valueToSet)
                 }
             } catch (e: Exception) {
@@ -169,24 +172,22 @@ class ShapeShift internal constructor(
         val condition = condition
             ?: conditionClazz?.getCachedInstance()
             ?: return true
-        condition as MappingCondition<Any>
         val context = MappingConditionContext(value, this@ShapeShift)
-        return condition.isValid(context)
+        return (condition as MappingCondition<Any>).isValid(context)
     }
 
     private fun ResolvedMappedProperty.effectiveMappingStrategy(defaultMappingStrategy: MappingStrategy): MappingStrategy {
-        return if (overrideMappingStrategy != null && overrideMappingStrategy != MappingStrategy.NONE
-        ) {
+        return if (overrideMappingStrategy != null && overrideMappingStrategy != MappingStrategy.NONE) {
             overrideMappingStrategy
         } else {
             defaultMappingStrategy
         }
     }
 
-    private fun Class<out MappingCondition<*>>?.getCachedInstance(): MappingCondition<*>? {
+    private fun KClass<out MappingCondition<*>>?.getCachedInstance(): MappingCondition<*>? {
         this ?: return null
         return conditionCache.computeIfAbsent(this) {
-            getDeclaredConstructor().newInstance()
+            this.constructors.find { it.parameters.isEmpty() }!!.call()
         }
     }
 
@@ -225,21 +226,21 @@ class ShapeShift internal constructor(
         var subTarget = property.getter.call(target)
 
         if (subTarget == null) {
-            subTarget = initializeObject(property.type().java)
+            subTarget = initializeObject(property.type())
             property.setEffectiveValue(target, subTarget)
         }
 
         return getToPairInstanceByNodes(nodes.drop(1), subTarget)
     }
 
-    private fun getTransformerByType(type: Class<out MappingTransformer<out Any?, out Any?>>): MappingTransformerRegistration<out Any, out Any> {
-        return transformersByTypeCache.computeIfAbsent(type) { _ ->
-            transformerRegistrations.find { it.transformer::class.java == type } ?: MappingTransformerRegistration.EMPTY
+    private fun getTransformerByType(type: KClass<out MappingTransformer<out Any?, out Any?>>): MappingTransformerRegistration<out Any, out Any> {
+        return transformersByTypeCache.computeIfAbsent(type) {
+            transformerRegistrations.find { it.transformer::class == type } ?: MappingTransformerRegistration.EMPTY
         }
     }
 
     private fun getMappingStructure(fromClass: KClass<*>, toClass: KClass<*>): MappingStructure {
-        val key = ClassPair(fromClass, toClass)
+        val key = KClassPair(fromClass, toClass)
         return mappingStructures.computeIfAbsent(key) {
             val resolutions = mappingDefinitionResolvers
                 .mapNotNull { it.resolve(fromClass, toClass) }
@@ -248,11 +249,11 @@ class ShapeShift internal constructor(
         }
     }
 
-    private fun <From: Any, To: Any> getDecorators(classPair: ClassPair<From, To>): List<MappingDecorator<From, To>> {
-        return decoratorCache.computeIfAbsent(classPair) {
+    private fun <From : Any, To : Any> getDecorators(KClassPair: KClassPair<From, To>): List<MappingDecorator<From, To>> {
+        return decoratorCache.computeIfAbsent(KClassPair) {
             decoratorRegistrations
                 .filter { decoratorRegistration ->
-                    decoratorRegistration.id == classPair
+                    decoratorRegistration.id == KClassPair
                 }
                 .map { decoratorRegistrations ->
                     decoratorRegistrations.decorator
@@ -265,23 +266,20 @@ class ShapeShift internal constructor(
         fromPair: ObjectPropertyTrio,
         toPair: ObjectPropertyTrio
     ): MappingTransformerRegistration<*, *> {
-        var transformerRegistration: MappingTransformerRegistration<*, *> = MappingTransformerRegistration.EMPTY
-        if (transformerRegistration == MappingTransformerRegistration.EMPTY) {
-            if (coordinates.type == null) {
-                val key = ClassPair(fromPair.type, toPair.type)
-                val defaultTransformerRegistration = defaultTransformers[key]
-                if (defaultTransformerRegistration != null) {
-                    return defaultTransformerRegistration
-                }
-                return MappingTransformerRegistration.EMPTY
-            } else {
-                transformerRegistration = getTransformerByType(coordinates.type)
-                if (transformerRegistration == MappingTransformerRegistration.EMPTY) {
-                    error("Could not find transformer by type [ ${coordinates.type} ] on $fromPair")
-                }
+        if (coordinates.type == null) {
+            val key = KClassPair(fromPair.type, toPair.type)
+            defaultTransformers[key]?.let {
+                return it
             }
+            return MappingTransformerRegistration.EMPTY
         }
-        return transformerRegistration
+
+        getTransformerByType(coordinates.type).let {
+            if (MappingTransformerRegistration.EMPTY == it) {
+                error("Could not find transformer by type [ ${coordinates.type} ] on $fromPair")
+            }
+            return it
+        }
     }
 
     private fun <From : Any, To : Any> registerTransformer(registration: MappingTransformerRegistration<From, To>) {
@@ -294,15 +292,15 @@ class ShapeShift internal constructor(
         }
 
         transformerRegistrations.add(registration)
-        transformersByTypeCache.remove(registration.transformer::class.java)
+        transformersByTypeCache.remove(registration.transformer::class)
     }
 
-    private fun <Type> initializeObject(clazz: Class<Type>): Type {
+    private fun <Type : Any> initializeObject(clazz: KClass<Type>): Type {
         val supplier = objectSuppliers[clazz]
         if (supplier != null) {
             return supplier.get() as Type
         }
-        val constructor = clazz.constructors?.find { it.parameters.size == 0 }
+        val constructor = clazz.java.constructors.find { it.parameters.isEmpty() }
         if (constructor != null) {
             return constructor.newInstance() as Type
         }

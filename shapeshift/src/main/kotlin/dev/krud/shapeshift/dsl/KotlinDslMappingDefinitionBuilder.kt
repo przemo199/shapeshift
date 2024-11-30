@@ -156,20 +156,20 @@ class KotlinDslMappingDefinitionBuilder<RootFrom : Any, RootTo : Any>(
                 if (fieldMapping.transformerClazz == null) {
                     TransformerCoordinates.NONE
                 } else {
-                    TransformerCoordinates.ofType(fieldMapping.transformerClazz!!.java)
+                    TransformerCoordinates.ofType(fieldMapping.transformerClazz!!)
                 },
                 fieldMapping.transformer,
-                fieldMapping.conditionClazz?.java,
+                fieldMapping.conditionClazz,
                 fieldMapping.condition,
                 fieldMapping.mappingStrategy
             )
-        }
-            .toMutableList()
+        }.toMutableList()
 
         resolvedMappedProperties += getAutoMappings(fromClazz, toClazz, autoMappingStrategy)
             .filter { autoResolvedMappedField ->
                 resolvedMappedProperties.none {
-                    it.mapFromProperties.first() == autoResolvedMappedField.mapFromProperties.first() || it.mapToProperties.first() == autoResolvedMappedField.mapToProperties.first()
+                    it.mapFromProperties.first() == autoResolvedMappedField.mapFromProperties.first()
+                        || it.mapToProperties.first() == autoResolvedMappedField.mapToProperties.first()
                 }
             }
         return Result(

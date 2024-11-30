@@ -31,7 +31,7 @@ class AnnotationMappingDefinitionResolver : MappingDefinitionResolver {
 
         val resolvedMappedProperties = mutableListOf<ResolvedMappedProperty>()
         for ((mappedField, field) in mappedFieldReferences) {
-            val transformerCoordinates = TransformerCoordinates.ofType(mappedField.transformer.java)
+            val transformerCoordinates = TransformerCoordinates.ofType(mappedField.transformer)
 
             val mapFromCoordinates = resolveNodesToFields(mappedField.mapFrom.splitIgnoreEmpty(NODE_DELIMITER), field, fromClazz)
 
@@ -51,7 +51,7 @@ class AnnotationMappingDefinitionResolver : MappingDefinitionResolver {
                 mapToCoordinates,
                 transformerCoordinates,
                 null,
-                conditionClazz?.java,
+                conditionClazz,
                 null,
                 mappedField.overrideMappingStrategy
             )

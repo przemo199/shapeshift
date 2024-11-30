@@ -19,7 +19,7 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.superclasses
 
-data class ClassPair<From: Any, To: Any>(val from: KClass<out From>, val to: KClass<out To>)
+data class KClassPair<From: Any, To: Any>(val from: KClass<out From>, val to: KClass<out To>)
 
 internal fun Field.getValue(target: Any): Any? {
     return get(target)
@@ -42,12 +42,18 @@ internal fun KClass<*>?.getDeclaredPropertyRecursive(name: String): KProperty1<*
     throw NoSuchFieldException(name)
 }
 
-internal fun KProperty<*>.getGenericAtPosition(position: Int): KClass<*> {
-    val arguments = returnType.arguments
-    if (arguments.isEmpty()) {
-        error("Type $returnType is not parameterized")
+internal fun KProperty<*>.findGenericAtPosition(position: Int): KClass<*>? {
+    if (returnType.arguments.size <= position) {
+        return null
     }
-    return arguments[position].type?.classifier as KClass<*>
+    return returnType.arguments[position].type?.classifier as KClass<*>
+}
+
+internal fun KProperty<*>.getGenericAtPosition(position: Int): KClass<*> {
+    findGenericAtPosition(position)?.let {
+        return it
+    }
+    error("Type $returnType is not parameterized")
 }
 
 fun KProperty<*>.type(): KClass<*> = returnType.classifier as KClass<*>

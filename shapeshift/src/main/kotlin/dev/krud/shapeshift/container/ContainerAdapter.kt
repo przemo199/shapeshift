@@ -16,7 +16,7 @@ import kotlin.reflect.KProperty
 interface ContainerAdapter<ContainerType : Any> {
     val containerClazz: KClass<ContainerType>
 
-    fun getTrueType(field: KProperty<*>): KClass<*>
+    fun getTrueType(property: KProperty<*>): KClass<*>
 
     fun unwrapValue(container: ContainerType?): Any?
 

@@ -13,6 +13,7 @@ package dev.krud.shapeshift.dto
 import dev.krud.shapeshift.MappingStrategy
 import dev.krud.shapeshift.condition.MappingCondition
 import dev.krud.shapeshift.transformer.base.MappingTransformer
+import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
 data class ResolvedMappedProperty(
@@ -20,7 +21,7 @@ data class ResolvedMappedProperty(
     val mapToProperties: List<KProperty1<*, *>>,
     val transformerCoordinates: TransformerCoordinates = TransformerCoordinates.NONE,
     val transformer: MappingTransformer<*, *>?,
-    val conditionClazz: Class<out MappingCondition<*>>?,
+    val conditionClazz: KClass<out MappingCondition<*>>?,
     val condition: MappingCondition<*>?,
     val overrideMappingStrategy: MappingStrategy?
 )

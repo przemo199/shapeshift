@@ -17,6 +17,7 @@ import dev.krud.shapeshift.transformer.base.MappingTransformer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.GenericTypeResolver
+import kotlin.reflect.KClass
 
 @Configuration
 class ShapeShiftTransformerCustomizer : ShapeShiftBuilderCustomizer {
@@ -27,8 +28,8 @@ class ShapeShiftTransformerCustomizer : ShapeShiftBuilderCustomizer {
         mappingTransformers?.forEach { mappingTransformer ->
             val types = GenericTypeResolver.resolveTypeArguments(mappingTransformer::class.java, MappingTransformer::class.java)
             val registration = MappingTransformerRegistration(
-                types!![0] as Class<Any>,
-                types[1] as Class<Any>,
+                types[0].kotlin as KClass<Any>,
+                types[1].kotlin as KClass<Any>,
                 mappingTransformer as MappingTransformer<Any, Any>,
                 false
             )
